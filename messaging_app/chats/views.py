@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
-
 from .models import Conversation, Message, User
 from .serializers import ConversationSerializer, MessageSerializer
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsParticipantOfConversation
 
 from rest_framework.decorators import action
 
@@ -87,3 +88,30 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = MessageSerializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+
+
+
+# Message ViewSet
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+
+    def perform_create(self, serializer):
+        """
+        Ensure a user can only send a message in a conversation they belong to.
+        """
+        conversation = serializer.validated_data["conversation"]
+
+        if self.request.user not in conversation.participants.all():
+            raise PermissionError("You are not a participant in this conversation.")
+
+        serializer.save(sender=self.request.user)
