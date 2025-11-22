@@ -4,6 +4,9 @@ from .models import Conversation, Message, User
 from .serializers import ConversationSerializer, MessageSerializer
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsParticipantOfConversation
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import MessageFilter
+from .pagination import MessagePagination
 
 from rest_framework.decorators import action
 
@@ -111,6 +114,27 @@ class MessageViewSet(viewsets.ModelViewSet):
         """
         conversation = serializer.validated_data["conversation"]
 
+        if self.request.user not in conversation.participants.all():
+            raise PermissionError("You are not a participant in this conversation.")
+
+        serializer.save(sender=self.request.user)
+
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+
+    # Add filtering + pagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MessageFilter
+    pagination_class = MessagePagination
+
+    def perform_create(self, serializer):
+        conversation = serializer.validated_data["conversation"]
+
+        # ensure user is participant
         if self.request.user not in conversation.participants.all():
             raise PermissionError("You are not a participant in this conversation.")
 
