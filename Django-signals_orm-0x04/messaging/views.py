@@ -39,8 +39,8 @@ def threaded_conversation(request, message_id):
 
 def inbox(request):
     user = request.user
-    unread_messages = Message.unread.for_user(user)
-    
+    unread_messages = Message.unread.unread_for_user(user)  # Correct usage
+
     context = {
         'unread_messages': unread_messages
     }
