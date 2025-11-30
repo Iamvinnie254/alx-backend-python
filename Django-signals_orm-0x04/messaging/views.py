@@ -15,24 +15,24 @@ def delete_user(request):
     return redirect('home')  # Redirect to home or goodbye page
 
 def get_all_replies(message):
-    """Return a nested dictionary of replies"""
-    result = []
-    for reply in message.replies.all():
-        result.append({
+    replies = []
+    for reply in message.replies.all():  # uses the related_name, not a filter on Message
+        replies.append({
             'reply': reply,
-            'replies': get_all_replies(reply)  # recursive call
+            'replies': get_all_replies(reply)  # recursion
         })
-    return result
+    return replies
+
 
 def threaded_conversation(request, message_id):
-    # Fetch the main message with its sender and receiver to avoid extra queries
     main_message = Message.objects.select_related('sender', 'receiver').get(pk=message_id)
+    nested_replies = get_all_replies(main_message)
 
     # Prefetch all replies (and their sender/receiver) efficiently
     replies = get_all_replies(main_message)  # nested structure
 
     context = {
         'message': main_message,
-        'replies': replies,
+        'replies': nested_replies
     }
     return render(request, 'messaging/threaded_conversation.html', context)
