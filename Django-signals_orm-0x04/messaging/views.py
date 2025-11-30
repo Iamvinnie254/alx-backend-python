@@ -1,7 +1,9 @@
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
+from .models import Message
+
 
 @login_required
 def delete_user(request):
@@ -11,3 +13,26 @@ def delete_user(request):
     # Delete the user account
     user.delete()
     return redirect('home')  # Redirect to home or goodbye page
+
+def get_all_replies(message):
+    """Return a nested dictionary of replies"""
+    result = []
+    for reply in message.replies.all():
+        result.append({
+            'reply': reply,
+            'replies': get_all_replies(reply)  # recursive call
+        })
+    return result
+
+def threaded_conversation(request, message_id):
+    # Fetch the main message with its sender and receiver to avoid extra queries
+    main_message = Message.objects.select_related('sender', 'receiver').get(pk=message_id)
+
+    # Prefetch all replies (and their sender/receiver) efficiently
+    replies = get_all_replies(main_message)  # nested structure
+
+    context = {
+        'message': main_message,
+        'replies': replies,
+    }
+    return render(request, 'messaging/threaded_conversation.html', context)
