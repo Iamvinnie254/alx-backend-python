@@ -36,3 +36,12 @@ def threaded_conversation(request, message_id):
         'replies': nested_replies
     }
     return render(request, 'messaging/threaded_conversation.html', context)
+
+def inbox(request):
+    user = request.user
+    unread_messages = Message.unread.for_user(user)
+    
+    context = {
+        'unread_messages': unread_messages
+    }
+    return render(request, 'messaging/inbox.html', context)
